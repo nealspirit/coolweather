@@ -30,6 +30,7 @@ public class Utility {
                 return true;
             } catch (JSONException e) {
                 e.printStackTrace();
+                Log.d("MainActivity","获取数据失败");
             }
         }
         return false;

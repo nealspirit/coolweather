@@ -6,6 +6,8 @@ import android.provider.ContactsContract;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.text.TextUtils;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -22,6 +24,9 @@ import com.coolweather.android.db.Province;
 import com.coolweather.android.util.HttpUtil;
 import com.coolweather.android.util.Utility;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.litepal.crud.DataSupport;
 
 import java.io.IOException;
@@ -30,6 +35,8 @@ import java.util.List;
 
 import okhttp3.Call;
 import okhttp3.Callback;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
 import okhttp3.Response;
 
 public class ChooseAreaFragment extends Fragment {
@@ -156,49 +163,114 @@ public class ChooseAreaFragment extends Fragment {
     /*
     * 根据传入的地址和类型从服务器上查询省市县数据
     * */
-    private void queryFromServer(String address, final String type) {
+    private void queryFromServer(final String address, final String type) {
         showProgressDialog();
-        HttpUtil.sendOkHttpRequest(address, new Callback() {
+        new Thread(new Runnable() {
             @Override
-            public void onFailure(Call call, IOException e) {
-                getActivity().runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        closeProgressDialog();
-                        Toast.makeText(getContext(), "加载失败", Toast.LENGTH_SHORT).show();
+            public void run() {
+                try {
+                    OkHttpClient client = new OkHttpClient();
+                    Request request = new Request.Builder().url(address).build();
+                    Response response = client.newCall(request).execute();
+                    String responseData = response.body().string();
+                    boolean result = false;
+                    if ("province".equals(type)){
+                        result = parseJSONWithProvince(responseData);
+                    }else if ("city".equals(type)){
+                        result = parseJSONWithCity(responseData,selectedProvince.getId());
+                    }else if ("county".equals(type)){
+                        result = parseJSONWithCounty(responseData,selectedCity.getId());
                     }
-                });
-            }
-
-            @Override
-            public void onResponse(Call call, Response response) throws IOException {
-                String responseText = response.body().toString();                                   //读取服务器中数据
-                boolean result = false;
-                if ("province".equals(type)){
-                    result = Utility.handleProvinceResponse(responseText);
-                }else if ("city".equals(type)){
-                    result = Utility.handleCityResponse(responseText,selectedProvince.getId());
-                }else if ("county".equals(type)){
-                    result = Utility.handleCountyResponse(responseText,selectedCity.getId());
-                }
-                if (result){
-                    getActivity().runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            closeProgressDialog();
-                            if ("province".equals(type)){
-                                queryProvinces();
-                            }else if ("city".equals(type)){
-                                queryCities();
-                            }else if ("county".equals(type)){
-                                queryCounties();
+                    if (result){
+                        getActivity().runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                closeProgressDialog();
+                                if ("province".equals(type)){
+                                    queryProvinces();
+                                }else if ("city".equals(type)){
+                                    queryCities();
+                                }else if ("county".equals(type)){
+                                    queryCounties();
+                                }
                             }
-                        }
-                    });
+                        });
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
             }
-        });
+        }).start();
+
     }
+
+    /*
+     * 解析和处理服务器返回的省级数据
+     * */
+    private boolean parseJSONWithProvince(String response) {
+        if (!TextUtils.isEmpty(response)){
+            try{
+                JSONArray allProvinces = new JSONArray(response);
+                for (int i = 0; i < allProvinces.length(); i++){
+                    JSONObject provinceObject = allProvinces.getJSONObject(i);
+                    Province province = new Province();
+                    province.setProvinceName(provinceObject.getString("name"));
+                    province.setProvinceCode(provinceObject.getInt("id"));
+                    province.save();
+                }
+                return true;
+            } catch (JSONException e) {
+                e.printStackTrace();
+                Log.d("MainActivity","获取数据失败");
+            }
+        }
+        return false;
+    }
+    /*
+     * 解析和处理服务器返回的市级数据
+     * */
+    private boolean parseJSONWithCity(String response, int provinceId) {
+        if (!TextUtils.isEmpty(response)){
+            try{
+                JSONArray allCities = new JSONArray(response);
+                for (int i = 0; i < allCities.length(); i++){
+                    JSONObject cityObject = allCities.getJSONObject(i);
+                    City city = new City();
+                    city.setCityName(cityObject.getString("name"));
+                    city.setCityCode(cityObject.getInt("id"));
+                    city.setProvinceId(provinceId);
+                    city.save();
+                }
+                return true;
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+        return false;
+    }
+    /*
+     * 解析和处理服务器返回的县级数据
+     * */
+    private boolean parseJSONWithCounty(String response, int cityId) {
+        if (!TextUtils.isEmpty(response)){
+            try {
+                JSONArray allCounties = new JSONArray(response);
+                for (int i = 0; i < allCounties.length(); i++){
+                    JSONObject countyObject = allCounties.getJSONObject(i);
+                    County county = new County();
+                    county.setCountyName(countyObject.getString("name"));
+                    county.setWeatherId(countyObject.getString("weather_id"));
+                    county.setCityId(cityId);
+                    county.save();
+                }
+                return true;
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+        return false;
+    }
+
     /*
     * 显示进度对话框
     * */
