@@ -2,15 +2,20 @@ package com.coolweather.android;
 
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
+import android.support.design.widget.CollapsingToolbarLayout;
+import android.support.v4.widget.NestedScrollView;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.Toolbar;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.bumptech.glide.Glide;
 import com.coolweather.android.gson.Forecast;
 import com.coolweather.android.gson.Weather;
 import com.google.gson.Gson;
@@ -28,12 +33,14 @@ import okhttp3.Response;
 
 public class WeatherActivity extends AppCompatActivity {
 
-    private ScrollView weatherLayout;
-    private TextView titleCity,titleUpdateTime;
-    private TextView degreeText,weatherInfoText;
+    private NestedScrollView weatherLayout;
+    private TextView degreeText,weatherInfoText,windDirText;
     private LinearLayout forecastLayout;
     private TextView aqiText,pm25Text;
     private TextView comfortText,carwashText,sportText;
+    private CollapsingToolbarLayout collapsingToolbarLayout;
+    private Toolbar toolbar;
+    private ImageView weather_pic,weather_icon;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,9 +48,8 @@ public class WeatherActivity extends AppCompatActivity {
         setContentView(R.layout.activity_weather);
         //初始化各种控件
         weatherLayout = findViewById(R.id.weather_layout);
-        titleCity = findViewById(R.id.title_city);
-        titleUpdateTime = findViewById(R.id.title_update_time);
         degreeText = findViewById(R.id.degree_text);
+        windDirText = findViewById(R.id.wind_dir_text);
         weatherInfoText = findViewById(R.id.weather_info_text);
         forecastLayout = findViewById(R.id.forecast_layout);
         aqiText = findViewById(R.id.aqi_text);
@@ -51,6 +57,11 @@ public class WeatherActivity extends AppCompatActivity {
         comfortText = findViewById(R.id.comfort_text);
         carwashText = findViewById(R.id.car_wash_text);
         sportText = findViewById(R.id.sport_text);
+        collapsingToolbarLayout = findViewById(R.id.collapsing_toolbar);
+        toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        weather_pic = findViewById(R.id.weather_pic_img);
+        weather_icon = findViewById(R.id.weather_icon);
         //读取SharedPreferences中的本地缓存数据，第一次启动APP则没有数据
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         String weatherString = prefs.getString("weather",null);
@@ -65,6 +76,7 @@ public class WeatherActivity extends AppCompatActivity {
             requestWeather(weatherId);
         }
     }
+
     /*
     * 处理并展示Weather实体类中的数据
     * */
@@ -72,10 +84,12 @@ public class WeatherActivity extends AppCompatActivity {
         String cityName = weather.basic.cityName;
         String updateTime = weather.basic.update.updataTime.split(" ")[1];
         String degree = weather.now.temperature + "℃";
+        String windDir = weather.now.windDir;
         String weatherInfo = weather.now.more.info;
-        titleCity.setText(cityName);
-        titleUpdateTime.setText(updateTime);
+        int weatherCode = Integer.parseInt(weather.now.more.code);
+        collapsingToolbarLayout.setTitle(cityName);
         degreeText.setText(degree);
+        windDirText.setText(windDir);
         weatherInfoText.setText(weatherInfo);
         forecastLayout.removeAllViews();
         for (Forecast forecast : weather.forecastList){
@@ -100,6 +114,29 @@ public class WeatherActivity extends AppCompatActivity {
         comfortText.setText(comfort);
         carwashText.setText(carWash);
         sportText.setText(sport);
+        //设置天气图片
+        if (weatherCode == 100){
+            weather_pic.setImageResource(R.drawable.sunshine);
+            weather_icon.setImageResource(R.drawable.sunshine_icon);
+        }else if (weatherCode >= 101 && weatherCode <= 103){
+            weather_pic.setImageResource(R.drawable.cloudy);
+            weather_icon.setImageResource(R.drawable.cloudy_icon);
+        }else if (weatherCode == 104){
+            weather_pic.setImageResource(R.drawable.overcast);
+            weather_icon.setImageResource(R.drawable.overcast_icon);
+        }else if (weatherCode >= 300 && weatherCode <= 301){
+            weather_pic.setImageResource(R.drawable.shower);
+            weather_icon.setImageResource(R.drawable.shower_icon);
+        }else if (weatherCode >= 302 && weatherCode <= 304){
+            weather_pic.setImageResource(R.drawable.thunder);
+            weather_icon.setImageResource(R.drawable.thunder_icon);
+        }else if (weatherCode >= 305 && weatherCode <= 313){
+            weather_pic.setImageResource(R.drawable.rain);
+            weather_icon.setImageResource(R.drawable.rain_icon);
+        }else if (weatherCode >= 400 && weatherCode <= 407){
+            weather_pic.setImageResource(R.drawable.snow);
+            weather_icon.setImageResource(R.drawable.snow_icon);
+        }
         weatherLayout.setVisibility(View.VISIBLE);
     }
     /*
