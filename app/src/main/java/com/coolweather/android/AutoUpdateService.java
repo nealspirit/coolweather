@@ -14,6 +14,7 @@ import android.widget.Toast;
 import com.coolweather.android.gson.Weather;
 
 import java.io.IOException;
+import java.util.Calendar;
 
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -46,30 +47,43 @@ public class AutoUpdateService extends Service {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         final String weatherString = prefs.getString("weather",null);
         if (weatherString != null){
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    Weather weather = WeatherActivity.handleWeatherResponse(weatherString);
-                    String weatherId = weather.basic.weatherId;
-                    String weatherUrl = "http://guolin.tech/api/weather?cityid=" + weatherId + "&key=81459eab494c45d28c14e96556e8c032";
-                    try {
-                        OkHttpClient client = new OkHttpClient();
-                        Request request = new Request.Builder().url(weatherUrl).build();
-                        Response response = client.newCall(request).execute();
-                        String responseText = response.body().string();
-                        Weather weather1 = WeatherActivity.handleWeatherResponse(responseText);
-                        if (weather1 != null && "ok".equals(weather1.status)){
-                            SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(AutoUpdateService.this).edit();
-                            editor.putString("weather",responseText);
-                            editor.apply();
+            final Weather weather = WeatherActivity.handleWeatherResponse(weatherString);
+            Calendar calendar = Calendar.getInstance();
+            int minute = calendar.get(Calendar.MINUTE);
+            int hour = calendar.get(Calendar.HOUR_OF_DAY);
+            int now_time = minute + hour * 60;
+            int update_hour = Integer.parseInt(weather.basic.update.updataTime.split(" ")[1].split(":")[0]);
+            int update_minute = Integer.parseInt(weather.basic.update.updataTime.split(" ")[1].split(":")[1]);
+            int update_time = update_minute + update_hour * 60;
+            int time = now_time - update_time;
+            if (time > 60){
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        String weatherId = weather.basic.weatherId;
+                        String weatherUrl = "http://guolin.tech/api/weather?cityid=" + weatherId + "&key=81459eab494c45d28c14e96556e8c032";
+                        try {
+                            OkHttpClient client = new OkHttpClient();
+                            Request request = new Request.Builder().url(weatherUrl).build();
+                            Response response = client.newCall(request).execute();
+                            String responseText = response.body().string();
+                            Weather weather1 = WeatherActivity.handleWeatherResponse(responseText);
+                            if (weather1 != null && "ok".equals(weather1.status)){
+                                SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(AutoUpdateService.this).edit();
+                                editor.putString("weather",responseText);
+                                editor.apply();
+                            }
+                            Log.d("WeatherActivity","刷新成功");
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                            Log.d("WeatherActivity","刷新失败");
                         }
-                        Log.d("WeatherActivity","刷新成功");
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        Log.d("WeatherActivity","刷新失败");
                     }
-                }
-            }).start();
+                }).start();
+            }else {
+                Log.d("WeatherActivity",time + "分钟前已经更新过");
+            }
+
         }
     }
 }
