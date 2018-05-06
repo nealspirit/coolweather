@@ -1,13 +1,18 @@
 package com.coolweather.android;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
 import android.support.design.widget.CollapsingToolbarLayout;
+import android.support.v4.view.GravityCompat;
+import android.support.v4.widget.DrawerLayout;
 import android.support.v4.widget.NestedScrollView;
+import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
 import android.view.LayoutInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -34,19 +39,21 @@ import okhttp3.Response;
 public class WeatherActivity extends AppCompatActivity {
 
     private NestedScrollView weatherLayout;
-    private TextView degreeText,weatherInfoText,windDirText;
+    private TextView tv_updateTime,degreeText,weatherInfoText,windDirText;
     private LinearLayout forecastLayout;
     private TextView aqiText,pm25Text;
     private TextView comfortText,carwashText,sportText;
     private CollapsingToolbarLayout collapsingToolbarLayout;
     private Toolbar toolbar;
     private ImageView weather_pic,weather_icon;
+    public DrawerLayout drawerLayout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_weather);
         //初始化各种控件
+        tv_updateTime = findViewById(R.id.update_time);
         weatherLayout = findViewById(R.id.weather_layout);
         degreeText = findViewById(R.id.degree_text);
         windDirText = findViewById(R.id.wind_dir_text);
@@ -62,6 +69,7 @@ public class WeatherActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
         weather_pic = findViewById(R.id.weather_pic_img);
         weather_icon = findViewById(R.id.weather_icon);
+        drawerLayout = findViewById(R.id.drawer_layout);
         //读取SharedPreferences中的本地缓存数据，第一次启动APP则没有数据
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         String weatherString = prefs.getString("weather",null);
@@ -75,6 +83,12 @@ public class WeatherActivity extends AppCompatActivity {
             weatherLayout.setVisibility(View.INVISIBLE);
             requestWeather(weatherId);
         }
+        //设置Toolbar中meun按钮
+        ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null){
+            actionBar.setDisplayHomeAsUpEnabled(true);
+            actionBar.setHomeAsUpIndicator(R.drawable.home);
+        }
     }
 
     /*
@@ -82,7 +96,7 @@ public class WeatherActivity extends AppCompatActivity {
     * */
     private void showWeatherInfo(Weather weather) {
         String cityName = weather.basic.cityName;
-        String updateTime = weather.basic.update.updataTime.split(" ")[1];
+        String updateTime = weather.basic.update.updataTime;
         String degree = weather.now.temperature + "℃";
         String windDir = weather.now.windDir;
         String weatherInfo = weather.now.more.info;
@@ -114,6 +128,7 @@ public class WeatherActivity extends AppCompatActivity {
         comfortText.setText(comfort);
         carwashText.setText(carWash);
         sportText.setText(sport);
+        tv_updateTime.setText(updateTime);
         //设置天气图片
         if (weatherCode == 100){
             weather_pic.setImageResource(R.drawable.sunshine);
@@ -138,11 +153,13 @@ public class WeatherActivity extends AppCompatActivity {
             weather_icon.setImageResource(R.drawable.snow_icon);
         }
         weatherLayout.setVisibility(View.VISIBLE);
+        Intent intent = new Intent(this,AutoUpdateService.class);
+        startService(intent);
     }
     /*
      * 根据天气id请求城市天气信息
      * */
-    private void requestWeather(String weatherId) {
+    public void requestWeather(String weatherId) {
         final String weatherUrl = "http://guolin.tech/api/weather?cityid=" + weatherId + "&key=81459eab494c45d28c14e96556e8c032";
         new Thread(new Runnable() {
             @Override
@@ -189,5 +206,17 @@ public class WeatherActivity extends AppCompatActivity {
             e.printStackTrace();
         }
         return null;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()){
+            case android.R.id.home:
+                drawerLayout.openDrawer(GravityCompat.START);
+                break;
+            default:
+                break;
+        }
+        return true;
     }
 }

@@ -13,7 +13,7 @@
         android:id="@+id/degree_text"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textColor="#3C5F81"
+        android:textColor="@color/ToolbarColor"
         android:textSize="60sp"
         android:layout_gravity="end"
         />
@@ -23,7 +23,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="end"
-        android:textColor="#3C5F81"
+        android:textColor="@color/ToolbarColor"
         android:textSize="20sp"/>
 
     <TextView
@@ -31,7 +31,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="end"
-        android:textColor="#3C5F81"
+        android:textColor="@color/ToolbarColor"
         android:textSize="20sp"/>
 
 </LinearLayout>

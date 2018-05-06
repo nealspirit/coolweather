@@ -19,8 +19,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".WeatherActivity"
-            android:theme="@style/WeatherActivityTheme"></activity>
+        <activity
+            android:name=".WeatherActivity"
+            android:theme="@style/WeatherActivityTheme" />
+
+        <service
+            android:name=".AutoUpdateService"
+            android:enabled="true"
+            android:exported="true"></service>
     </application>
 
 </manifest>
